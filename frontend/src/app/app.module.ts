@@ -10,10 +10,14 @@ import { AngularFireFunctionsModule } from '@angular/fire/functions';
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
 import { environment } from '../environments/environment';
+import { LoginComponent } from './login/login.component';
+import { GameComponent } from './game/game.component';
 
 @NgModule({
 	declarations: [
-	AppComponent
+	AppComponent,
+	LoginComponent,
+	GameComponent
 	],
 	imports: [
 		BrowserModule,
