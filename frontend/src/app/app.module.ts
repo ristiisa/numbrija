@@ -1,5 +1,7 @@
 import { BrowserModule } from "@angular/platform-browser";
 import { NgModule } from "@angular/core";
+import { HttpClientModule } from '@angular/common/http';
+
 import { AngularFireModule } from '@angular/fire';
 import { AngularFireDatabaseModule } from '@angular/fire/database';
 import { AngularFirestoreModule } from '@angular/fire/firestore';
@@ -10,14 +12,12 @@ import { AngularFireFunctionsModule } from '@angular/fire/functions';
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
 import { environment } from '../environments/environment';
-import { LoginComponent } from './login/login.component';
 import { GameComponent } from './game/game.component';
 
 @NgModule({
 	declarations: [
-	AppComponent,
-	LoginComponent,
-	GameComponent
+		AppComponent,
+		GameComponent
 	],
 	imports: [
 		BrowserModule,
@@ -27,7 +27,8 @@ import { GameComponent } from './game/game.component';
 		AngularFireAuthModule,
 		AngularFireStorageModule,
 		AngularFireFunctionsModule,
-		AngularFireDatabaseModule
+		AngularFireDatabaseModule,
+		HttpClientModule
 	],
 	providers: [],
 	bootstrap: [AppComponent]

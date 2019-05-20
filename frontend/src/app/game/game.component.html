@@ -1,0 +1,49 @@
+<div class="ui centered raised card middle aligned">
+	<div class="center aligned content">
+		<div class="massive header" style="font-size: 2.7rem; padding-bottom: 30px; padding-top: 30px">
+			<p *ngIf="!newChallengeLoading">{{challenge}}?</p>
+			<p *ngIf="newChallengeLoading">
+				Starting {{(timeLeft || 5000) < 0 ? 'soon': 'in ' + (((timeLeft || 5000) / 1000) | number:'1.0-0')}}...
+			</p>
+		</div>
+		<div class="ui shape" style="width: 221px; height:62px">
+			<div class="sides">
+				<div class="side" id="wrong">
+					<div class="ui center-content massive header" style="width: 221px; height:62px">
+						<div class="ui content center">
+							Try Again!
+						</div>
+					</div>
+				</div>
+				<div class="active side" id="answer">
+					<div class="ui massive buttons" style="width: 221px; height:62px">
+						<button class="ui negative button" [disabled]="checking || newChallengeLoading"
+							(click)="answer(0, $event)">No</button>
+						<div class="or"></div>
+						<button class="ui positive button" [disabled]="checking || newChallengeLoading"
+							(click)="answer(1, $event)">Yes</button>
+					</div>
+				</div>
+				<div class="side" id="correct">
+					<div class="ui center-content massive header" style="width: 221px; height:62px">
+						<div class="ui content center">
+							Correct!
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="center aligned extra content">
+		<a class="ui huge image label" [class.orange]="player.uid == auth.uid" *ngFor="let player of players" style="margin:0; margin-bottom: 3px">
+			<img [src]="player.photoURL">
+			<span style="min-width: 50px;display: inline-block;">{{player.score}}</span>
+			<div class="detail" style="min-width: 100px;">
+				<i class="ban icon" *ngIf="player.status == 'disconnect'"></i>
+				{{player.status}}
+			</div>
+
+		</a>
+	</div>
+</div>
