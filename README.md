@@ -21,15 +21,21 @@ firebase serve --only functions --port=5000 &
 ```
 
 # Backend
+```
 cd backend
 npm run tests
+```
 
 # Frontend
+```
 cd frontend
 npm run test
 npm run e2e
+```
 
 # Deploying
+```
 cd frontend
 npm build --prod --aot
 firebase deploy --only functions,hosting
+```
