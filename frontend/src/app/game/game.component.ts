@@ -38,7 +38,6 @@ export class GameComponent implements OnInit {
 	usersLoaded: boolean;
 
 	constructor(private functions: AngularFireFunctions, private db: AngularFireDatabase, public auth: AuthService, private cd: ChangeDetectorRef) {
-		
 	}
 
 	ngOnInit() {
@@ -86,16 +85,16 @@ export class GameComponent implements OnInit {
 					}
 					this.message = "Too Slow!";
 
-					if ($(".active.side").eq(0).id === "answer")
-						$(".ui.shape").eq(0).shape("flip down");
+					if ($(".active.side").first().attr('id') === "answer")
+						$(".ui.shape").first().shape("flip down");
 				}
 			} else {
 				// if the round is not closed we should stop the countdown...
 				this.pauseTimer();
 
 				// and show the control for answering to the user
-				if ($(".active.side").eq(0).id !== "answer")
-					$(".ui.shape").eq(0).shape("flip up");
+				if ($(".active.side").first().attr('id') !== "answer")
+					$(".ui.shape").first().shape("flip up");
 			}
 
 			this.roundsLoaded = true;
@@ -136,24 +135,26 @@ export class GameComponent implements OnInit {
 				this.newChallengeLoading = true;
 				this.answerRecorded = new Date().getTime();
 				this.message = "Correct!";
-				if ($(".active.side").eq(0).id === "answer")
-					$(".ui.shape").eq(0).shape("flip right");
+				if ($(".active.side").first().attr('id') === "answer")
+					$(".ui.shape").first().shape("flip right");
 
 				$(".game").transition("jiggle");
 
 				// yay!
-				confetti($("body").eq(0), { duration: 3000 });
+				confetti($("body").first(), { duration: 3000 });
 			} else {
 				this.message = "Try Again!";
 
-				if ($(".active.side").eq(0).id === "answer")
-					$(".ui.shape").eq(0).shape("flip left");
+				console.log($(".active.side").first(), $(".active.side").first().attr('id'))
+
+				if ($(".active.side").first().attr('id') === "answer")
+					$(".ui.shape").first().shape("flip left");
 
 				$(".game").transition("shake");
 
 				// lets flip back to the input side, so the user can guess again
 				setTimeout(() => {
-					$(".ui.shape").eq(0).shape("flip up");
+					$(".ui.shape").first().shape("flip up");
 				}, 2000);
 			}
 		}).finally(() => {

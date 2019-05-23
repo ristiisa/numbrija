@@ -18,8 +18,6 @@ cd ./backend
 npm run watch &
 firebase serve --only database  --port=9000 &
 firebase serve --only functions --port=5000 &
-cd ../frontend
-ng serve
 ```
 
 # Backend
@@ -28,7 +26,8 @@ npm run tests
 
 # Frontend
 cd frontend
-npm run tests
+npm run test
+npm run e2e
 
 # Deploying
 cd frontend
