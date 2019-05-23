@@ -63,14 +63,14 @@ before(async () => {
     });
 });
 
-beforeEach(async () => {
-    // Clear the database between tests
-    return adminApp().ref().set(null);
-});
-
 after(async () => {
     // Close any open apps
     return Promise.all(firebase.apps().map(app => app.delete()));
+});
+
+afterEach(async () => {
+    // Clear the database between tests
+    return adminApp().ref().set(null);
 });
 
 describe("housekeeping", () => {
@@ -109,7 +109,7 @@ describe("generateChallenge", () => {
         assert(challenge.combined, challenge.operands.join(challenge.operator) + '=' + challenge.value);
     });
 });
-/*
+
 describe("newRound", () => {
     it("should create new round with the correct challenge", async () => {
         let db = adminApp();
@@ -132,157 +132,102 @@ describe("newRound", () => {
         assert.equal(round.val().challenge, challenge.combined);
         assert(rounds.child(round.val().key).child('challenge').val(), challenge.combined);
     });
-});*/
+});
 
-describe("answer", () => {
-    let db = adminApp();
-    Object.defineProperty(admin, 'auth', {
-        get: () => {
-            return sinon.stub().returns({
-                verifyIdToken: sinon.stub().returns(Promise.resolve({
-                    uid: 0
-                }))
-            })
-        }
+describe("answer", async () => {
+    let db, rspData, challenge, rsp;
+    
+    // for some reason mocking bleed is contaminated in the hooks... so if it works lets do our setup in here
+    before(async () => {
+        db = adminApp();
+        Object.defineProperty(admin, 'auth', {
+            get: () => {
+                return sinon.stub().returns({
+                    verifyIdToken: sinon.stub().returns(Promise.resolve({
+                        uid: 0
+                    }))
+                })
+            }
+        });
+
+        // lets override the newRound and houseKeeping functions as we test them separately
+        Object.defineProperty(lib, 'newRound', {get: () => sinon.stub().returns(Promise.resolve())});
+        Object.defineProperty(lib, 'houseKeeping', {get: () => sinon.stub().returns(Promise.resolve())});
+
+        challenge = {
+            answer: true,
+            challenge: '1+1=2',
+            key: 0
+        };
+
+        rsp = {
+            send: (data) => {
+                rspData = data;
+                return Promise.resolve()
+            }
+        };
     });
-/*
+
+    beforeEach(async () => {
+        await db.ref().set({
+            rounds: {
+                [challenge.key]: challenge
+            },
+            users: {
+                0: {
+                    score: 1
+                }
+            }
+        });
+    });
+
     it("should increase the score of user if the answer is correct", async () => {
-        Object.defineProperty(lib, 'newRound', {get: () => sinon.stub().returns(Promise.resolve())});
-        Object.defineProperty(lib, 'houseKeeping', {get: () => sinon.stub().returns(Promise.resolve())});
+        let scoreBefore = (await db.ref("/users/0/score").once('value')).val();
+        await lib.checkAnswer({answer: challenge.answer, rid: challenge.key}, {uid: 0}, rsp);
+        let scoreAfter = (await db.ref("/users/0/score").once('value')).val();
 
-        let challenge = {
-            answer: true,
-            challenge: '1+1=2',
-            key: 0
-        };
-
-        await db.ref().set({
-            rounds: {
-                [challenge.key]: challenge
-            },
-            users: {
-                0: {
-                    score: 1
-                }
-            }
-        });
-
-        const req = {answer: challenge.answer, rid: challenge.key};
-        const rsp = {
-            send: (data) => {
-                assert.equal(data.correct, true);
-                return Promise.resolve()
-            }
-        };
-
-        await lib.checkAnswer(req, {uid: 0}, rsp);
-        let user = await db.ref("/users/0").once('value');
-        assert.equal(user.child('score').val(), 2);
+        assert.equal(scoreAfter, scoreBefore + 1);
     });
 
-    it("should not increase the score of user if the answer is not correct", async () => {
-        Object.defineProperty(lib, 'newRound', {get: () => sinon.stub().returns(Promise.resolve())});
-        Object.defineProperty(lib, 'houseKeeping', {get: () => sinon.stub().returns(Promise.resolve())});
+    it("should decrease the score of user if the answer is incorrect", async () => {
+        let scoreBefore = (await db.ref("/users/0/score").once('value')).val();
+        await lib.checkAnswer({answer: !challenge.answer, rid: challenge.key}, {uid: 0}, rsp);
+        let scoreAfter = (await db.ref("/users/0/score").once('value')).val();
 
-        let challenge = {
-            answer: true,
-            challenge: '1+1=2',
-            key: 0
-        };
-
-        await db.ref().set({
-            rounds: {
-                [challenge.key]: challenge
-            },
-            users: {
-                0: {
-                    score: 1
-                }
-            }
-        });
-
-        const req = {answer: !challenge.answer, rid: challenge.key};
-        const rsp = {
-            send: (data) => {
-                assert.notEqual(data.correct, true);
-                return Promise.resolve()
-            }
-        };
-
-        await lib.checkAnswer(req, {uid: 0}, rsp);
-        let user = await db.ref("/users/0").once('value');
-        assert.notEqual(user.child('score').val(), 2);
+        assert.equal(scoreAfter, scoreBefore - 1);
     });
 
-    /*it("should not return positive result for answer correctnes", async () => {
-        Object.defineProperty(lib, 'newRound', {get: () => sinon.stub().returns(Promise.resolve())});
-        Object.defineProperty(lib, 'houseKeeping', {get: () => sinon.stub().returns(Promise.resolve())});
+    it("should respond ok if the answer is correct", async () => {
+        await lib.checkAnswer({answer: challenge.answer, rid: challenge.key}, {uid: 0}, rsp);
 
-        let challenge = {
-            answer: true,
-            challenge: '1+1=2',
-            key: 0
-        };
+        assert.equal(rspData.data.result, true);
+        assert.equal(rspData.data.correct, true);
+    });
 
-        await db.ref().set({
-            rounds: {
-                [challenge.key]: challenge
-            },
-            users: {
-                0: {
-                    score: 1
-                }
-            }
+    it("should respond nok if the answer is correct", async () => {
+        await lib.checkAnswer({answer: !challenge.answer, rid: challenge.key}, {uid: 0}, rsp);
+
+        assert.equal(rspData.data.result, true);
+        assert.equal(rspData.data.correct, false);
+    });
+});
+
+describe("generateAvataaarUrl", () => {
+    it("should create valid avataaar url", () => {
+        let genUrl = lib.generateAvataaarUrl();
+
+        const http = require('http');
+        const url = require('url');
+
+        let rsp = new Promise((resolve, reject) => {
+            let options = {method: 'HEAD', host: url.parse(genUrl).host, port: 80, path: url.parse(genUrl).pathName};
+            let req = http.request(options, data => {
+                resolve(data)
+            });
+            req.end();
         });
 
-        const req = {answer: !challenge.answer, rid: challenge.key};
-        const rsp = {
-            send: (data) => {
-                console.log(data)
-                assert.notEqual(data.correct, true);
-
-                return Promise.resolve()
-            }
-        };
-
-        await lib.checkAnswer(req, {uid: 0}, rsp);
-    });*/
-
-    /*it("should return positive result for answer correctnes", async () => {
-        Object.defineProperty(lib, 'newRound', {get: () => sinon.stub().returns(Promise.resolve())});
-        Object.defineProperty(lib, 'houseKeeping', {get: () => sinon.stub().returns(Promise.resolve())});
-
-        let challenge = {
-            answer: true,
-            challenge: '1+1=2',
-            key: 0
-        };
-
-        await db.ref().set({
-            rounds: {
-                [challenge.key]: challenge
-            },
-            users: {
-                0: {
-                    score: 1
-                }
-            }
-        });
-
-        const req = {answer: challenge.answer, rid: challenge.key};
-
-        const rspCalled = new rx.ReplaySubject();
-        const rsp = {
-            send: (data) => {
-                console.log('send', data)
-                rspCalled.next(data);
-                return Promise.resolve()
-            }
-        };
-
-        await lib.checkAnswer(req, {uid: 0}, rsp);
-        rspCalled.toPromise().then(() => console.log('rspcalled'));
-        let result = await rspCalled.toPromise().then(() => console.log('rspcalled'));
-        console.log('done', result)
-    });*/
+        // instead of downloading the image from avataaar we check the status of the response
+        return rsp.then((data) => assert(data.statusCode >= 200 && data.statusCode < 400));
+    });
 });

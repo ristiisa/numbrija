@@ -12,6 +12,7 @@
 	"scripts": {
 		"lint": "tslint --project tsconfig.json",
 		"build": "./node_modules/.bin/tsc",
+		"tests": "./node_modules/.bin/mocha",
 		"serve": "npm run build && firebase serve --debug --only functions",
 		"shell": "npm run build && firebase functions:shell",
 		"start": "npm run shell",

@@ -39,13 +39,13 @@ export const generateChallenge = (): Challenge => {
 	}
 
 	// if the operator is / then lets make the operands dividable
-	if (operator == '/')
+	if (operator === '/')
 		if (!operands[1]) // lets not divide by zero
 			operands[1] = 1;
 		else if (operands[0] % operands[1] !== 0) {
 			// lets factorize the larger operand and choose a random factor to replace the divider
-			let i = +(operands[1] > operands[0]);
-			let factors = [...Array(operands[i] + 1).keys()].filter(i => operands[i] % i === 0);
+			const i = +(operands[1] > operands[0]);
+			const factors = [...Array(operands[i] + 1).keys()].filter(i => operands[i] % i === 0);
 			operands[1] = factors[Math.random() * factors.length | 0];
 			operands[0] = operands[i]
 		}
@@ -54,11 +54,11 @@ export const generateChallenge = (): Challenge => {
 
 	// if wrong answer flip then lets adjust the value a little™
 	if (Math.random() < 0.5) {
-		let oldValue = value;
+		const oldValue = value;
 		value = Math.random() * 10 | 0;
 
 		// just in case we hit the same number again
-		answer = oldValue == value;
+		answer = oldValue === value;
 	}
 
 	return {
@@ -74,7 +74,7 @@ export const generateChallenge = (): Challenge => {
  * A new round is generated and previous rounds closed
  */
 export const newRound = (): Promise<any> => {
-	let challenge = generateChallenge();
+	const challenge = generateChallenge();
 
 	// now insert a new round and update all other round statuses to closed
 	const newRound = admin.database().ref('/rounds').push();
@@ -113,7 +113,7 @@ export const houseKeeping = async (): Promise<any> => {
 	// TODO: remove old rounds
 	// if the user has been idle for 10 minutes set the status to idle
 	return admin.database().ref(`/users`).orderByChild('status').startAt('online').once('value').then(users => {
-		let update = {};
+		const update = {};
 		users.forEach((user: any) => {
 			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 10 * 60 * 1000 && user.child('status').val() != 'disconnected')
 				update[`${user.key}/status`] = 'idle';
@@ -133,7 +133,7 @@ export const join = functions.https.onCall(async (data, context) => {
 	if (!context.auth)
 		throw new functions.https.HttpsError('unauthenticated', 'permission denied');
 
-	let openRounds = await admin.database().ref('/rounds').orderByChild('status').equalTo(null).once('value');
+	const openRounds = await admin.database().ref('/rounds').orderByChild('status').equalTo(null).once('value');
 	if (!openRounds.hasChildren())
 		await newRound();
 
@@ -159,7 +159,6 @@ export const checkAnswer = async (data, token, res) => {
 	const roundRef = admin.database().ref(`/rounds/${data.rid}`);
 	const userRef = admin.database().ref(`/users/${token.uid}`);
 	return Promise.all([roundRef.once('value'), userRef.once('value')]).then(results => {
-		// tslint:disable: no-shadowed-variable
 		const [round, user] = results.map(r => r.val());
 
 		if (!round)
@@ -178,7 +177,7 @@ export const checkAnswer = async (data, token, res) => {
 				}
 			})
 
-		if (data.answer == round.answer) {
+		if (data.answer === round.answer) {
 			// now lets see if the correct answer is the first correct answer
 			return roundRef.child('status').transaction(status => {
 				// if the status has not been set then we are first to set it
@@ -196,6 +195,7 @@ export const checkAnswer = async (data, token, res) => {
 				}).then(() => console.log('update done')),
 				admin.database().ref(`/round`).update({
 					status: 'closed',
+					closedBy: token.uid,
 					newRoundIn: new Date().getTime() + 5000
 				}),
 				houseKeeping(), // NOTE: this is not a good place for this function, as user database grows this function gets very slow
@@ -218,7 +218,7 @@ export const checkAnswer = async (data, token, res) => {
 					// the user was correct, but not fast enough, we'll still record the answer time
 					res.send({
 						data: {
-							result: Response.ERROR,
+							result: Response.OK,
 							correct: false
 						}
 					})
@@ -229,13 +229,14 @@ export const checkAnswer = async (data, token, res) => {
 
 			return Promise.all([
 				userRef.update({
+					score: (user.score || 0) - 1,
 					lastAnswer: admin.database.ServerValue.TIMESTAMP,
 					status: 'online'
 				}),
 				houseKeeping()
 			]).then(() => res.send({
 				data: {
-					result: Response.ERROR,
+					result: Response.OK,
 					correct: false
 				}
 			}));

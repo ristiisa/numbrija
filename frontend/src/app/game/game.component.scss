@@ -1,5 +1,101 @@
-.center-content {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.game {
+    .center-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .card {
+        min-width: 300px;
+    }
+
+    .ui.card .content img {
+        vertical-align: unset;
+        padding: 3px;
+    }
+
+    .ui.shape {
+        min-height: 65px !important;
+        max-height: 65px !important;
+        overflow: hidden;
+    }
+
+    a.ui.huge.image.label.orange::before {
+        content: 'you';
+        font-size: 12px;
+        position: absolute;
+        left: -24px;
+        top: 15px;
+        color: darkgrey;
+        font-weight: bold;
+    }
+
+    .score.plusone::after {
+        content: '+1';
+        font-size: 14px;
+        margin-top: -5px;
+        position: absolute;    
+        top: 23px;
+        left: 90px;
+        color: darkgrey;
+        font-weight: bold;
+    }
+
+    .announcer {
+        font-size: 2rem;
+        line-height: 2.7rem;
+        height: 53px;
+    }
+
+    .challenge {
+        font-size: 2.7rem;
+        padding-bottom: 30px;
+        padding-top: 30px
+    }
+
+    .same-size {
+        width: 221px;
+        height:62px;
+    }
+
+    .plusone {
+        font-size: 14px;
+        margin-top: -5px;
+        position: absolute;    
+        top: 23px;
+        left: 90px;
+        color: darkgrey;
+        font-weight: bold;
+    }
+
+    .profile-avatar {
+        img {
+            position: relative;
+            margin-bottom: -173px;
+            width: 133px;
+            height: 141.05px;
+            z-index: 99;
+        }
+
+        .score {
+            border-radius: 50%;
+            color: white;
+            width: 50px;
+            height: 50px;
+            line-height: 2em;
+            font-size: 1.7em;
+            font-weight: 700;
+            position: relative;
+            z-index: 99;
+            right: -103px;
+            top: 40px;
+        }
+    
+        .background {    
+            background: #65c9ff;
+            z-index: 98;
+            right: -105px;
+            top: -10px;
+        }
+    }
 }

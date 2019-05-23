@@ -1,49 +1,77 @@
-<div class="ui centered raised card middle aligned">
-	<div class="center aligned content">
-		<div class="massive header" style="font-size: 2.7rem; padding-bottom: 30px; padding-top: 30px">
-			<p *ngIf="!newChallengeLoading">{{challenge}}?</p>
-			<p *ngIf="newChallengeLoading">
-				Starting {{(timeLeft || 5000) < 0 ? 'soon': 'in ' + (((timeLeft || 5000) / 1000) | number:'1.0-0')}}...
-			</p>
-		</div>
-		<div class="ui shape" style="width: 221px; height:62px">
-			<div class="sides">
-				<div class="side" id="wrong">
-					<div class="ui center-content massive header" style="width: 221px; height:62px">
-						<div class="ui content center">
-							Try Again!
-						</div>
-					</div>
-				</div>
-				<div class="active side" id="answer">
-					<div class="ui massive buttons" style="width: 221px; height:62px">
-						<button class="ui negative button" [disabled]="checking || newChallengeLoading"
-							(click)="answer(0, $event)">No</button>
-						<div class="or"></div>
-						<button class="ui positive button" [disabled]="checking || newChallengeLoading"
-							(click)="answer(1, $event)">Yes</button>
-					</div>
-				</div>
-				<div class="side" id="correct">
-					<div class="ui center-content massive header" style="width: 221px; height:62px">
-						<div class="ui content center">
-							Correct!
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+<div class="game" *ngIf="roundsLoaded && usersLoaded; else loading">
+	<div class="profile-avatar" *ngIf="auth.photoURL | async as url">
+		<img [src]="url" />
+		<div class="score center-content">{{score}}</div>
+		<div class="score background center-content"></div>
 	</div>
 
-	<div class="center aligned extra content">
-		<a class="ui huge image label" [class.orange]="player.uid == auth.uid" *ngFor="let player of players" style="margin:0; margin-bottom: 3px">
-			<img [src]="player.photoURL">
-			<span style="min-width: 50px;display: inline-block;">{{player.score}}</span>
-			<div class="detail" style="min-width: 100px;">
-				<i class="ban icon" *ngIf="player.status == 'disconnect'"></i>
-				{{player.status}}
+	<div class="ui centered raised card middle aligned">
+		<div class="center aligned content">
+			<div class="massive header" class="challenge">
+				<p *ngIf="!newChallengeLoading">{{challenge}}?</p>
+				<p *ngIf="newChallengeLoading" class="announcer">
+					{{(timeLeft || 5000) < 0 ? 'Starting Soon': 'New Game in ' + (((timeLeft || 5000) / 1000) | number:'1.0-0')}}...
+				</p>
 			</div>
 
-		</a>
+			<div class="ui shape same-size">
+				<div class="sides">
+					<div class="active side" id="answer">
+						<div class="ui massive buttons same-size">
+							<button class="ui negative button" [disabled]="checking || newChallengeLoading"
+								(click)="answer(0, $event)">No</button>
+							<div class="or"></div>
+							<button class="ui positive button" [disabled]="checking || newChallengeLoading"
+								(click)="answer(1, $event)">Yes</button>
+						</div>
+					</div>
+					<div class="side">
+						<div class="ui center-content massive header same-size">
+							<div class="ui content center">
+								{{message}}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="center aligned extra content">
+			<a class="ui huge image label" [class.orange]="uid == auth.uid" *ngFor="let uid of playerIds"
+				style="margin:0; margin-bottom: 3px" [id]="uid">
+				<img [src]="players[uid].photoURL" />
+				<span class="score" style="min-width: 50px;display: inline-block;">{{players[uid].score}}</span>
+				<div class="detail" style="min-width: 100px;">
+					<i class="ban icon" *ngIf="players[uid].status == 'disconnect'"></i>
+					{{players[uid].status}}
+				</div>
+			</a>
+		</div>
+	</div>
+</div>
+<ng-template #loading>
+	<div class="ui massive active centered inline loader"></div>
+</ng-template>
+
+<div class="ui small basic modal" id="connectionDown">
+	<div class="ui icon header">
+		<i class="times circle outline icon"></i>
+		Disconnected
+	</div>
+	<div class="ui center aligned content text container">
+		<p>It seems that connection to the game servers is disturbed</p>
+		<p>Check your connection settings</p>
+		<p>This message will dissaper when connection is restored.</p>
+	</div>
+</div>
+
+<div class="ui small basic modal" id="serverDeclined">
+	<div class="ui icon header">
+		<i class="times circle outline icon"></i>
+		Server Declined
+	</div>
+	<div class="ui center aligned content text container">
+		<p>It seems that server has declined your join request</p>
+		<p>Check back later</p>
 	</div>
 </div>

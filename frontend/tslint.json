@@ -6,6 +6,10 @@
 	"rules": {
 		"array-type": false,
 		"arrow-parens": false,
+		"curly": [
+			true,
+			"as-needed"
+		],
 		"deprecation": {
 			"severity": "warn"
 		},
@@ -20,7 +24,7 @@
 		"interface-name": false,
 		"max-classes-per-file": false,
 		"max-line-length": [
-			true,
+			false,
 			160
 		],
 		"member-access": false,
@@ -65,6 +69,11 @@
 			"double"
 		],
 		"trailing-comma": false,
+		"triple-equals": [
+			true,
+			"allow-null-check",
+			"allow-undefined-check"
+		],
 		"no-output-on-prefix": true,
 		"use-input-property-decorator": true,
 		"use-output-property-decorator": true,

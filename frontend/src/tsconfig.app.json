@@ -2,7 +2,11 @@
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"outDir": "../out-tsc/app",
-		"types": []
+		"types": [
+			"node",
+			"jquery",
+			"semantic-ui"
+		]
 	},
 	"exclude": [
 		"test.ts",
