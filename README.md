@@ -1,4 +1,5 @@
 # Numbrija
+A simple concurrent math game [Demo](https://numbrija.web.app/)
 
 # First steps
 ```
