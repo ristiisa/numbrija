@@ -37,28 +37,24 @@ export class GameComponent implements OnInit {
 	usersLoaded: boolean;
 	firstDisconnectMessage = true;
 	statusString = ['online', 'idle', 'offline'];
+	initDone:boolean;
 
 	constructor(private functions: AngularFireFunctions, private db: AngularFireDatabase, public auth: AuthService, private cd: ChangeDetectorRef) {
 	}
 
 	ngOnInit() {
 		this.auth.state.pipe(take(1)).subscribe(() => {
-			this.functions.httpsCallable("join")({}).toPromise<any>().then(rsp => {
-				if (rsp.data.result) {
-					// only set up the game if the server is running and is accepting new players
-					this.initGame();
-				} else {
-					$("#serverDeclined").modal('setting', 'closable', false).modal('show');
-				}
-			});
-
-			// NOTE: this does not work in chrome dev-tools
+			// NOTE: this does not work in chrome dev-tools if set to offline
 			// https://github.com/firebase/firebase-js-sdk/issues/249
 			this.db.database.ref(".info/connected").on("value", connected => {
-				const ref = this.db.database.ref(`users/${this.auth.uid}/status`);
 				if (connected.val() === true) {
-					ref.set(ConnectionStatus.Online);
 					$('#connectionDown').modal('setting', 'closable', false).modal('hide');
+
+					// we are now logged in but we must also check if we can join the game
+					this.joinGame().then(joined => {
+						if (joined) this.initGame();
+						else $("#serverDeclined").modal('setting', 'closable', false).modal('show');
+					});
 				} else {
 					if (!this.firstDisconnectMessage)
 						$('#connectionDown').modal('setting', 'closable', false).modal('show');
@@ -69,7 +65,29 @@ export class GameComponent implements OnInit {
 		});
 	}
 
+	joinGame(): Promise<boolean> {
+		return this.functions.httpsCallable("join")({}).toPromise<any>().then(rsp => {
+			return rsp.data.result;
+		});
+	}
+
+	reJoinGame(e){
+		const classList = e.target.classList;
+		classList.add("loading");
+		
+		this.joinGame().then(joined => {
+			if (!joined) $("#serverDeclined").modal('setting', 'closable', false).modal('show');
+		}).finally(() => {
+			classList.remove("loading");
+			$("#idle").modal('hide');
+		});
+
+	}
+
 	initGame() {
+		if(this.initDone) return;
+		this.initDone = true;
+
 		this.db.object<Round>("/round").valueChanges().subscribe(round => {
 			if (!round) return;
 
@@ -115,6 +133,12 @@ export class GameComponent implements OnInit {
 				if (users[uid].status !== ConnectionStatus.Offline) {
 					this.players[uid] = users[uid];
 					playerIds.push(uid);
+				}
+
+				if(uid == this.auth.uid) {
+					if(users[uid].status == ConnectionStatus.Idle) {
+						$('#idle').modal('setting', 'closable', false).modal('show');
+					}
 				}
 			});
 

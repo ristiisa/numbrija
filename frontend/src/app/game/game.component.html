@@ -74,3 +74,19 @@
 		<p>Check back later</p>
 	</div>
 </div>
+
+<div class="ui small basic modal" id="idle">
+	<div class="ui icon header">
+		<i class="times circle outline icon"></i>
+		You are idle!
+	</div>
+	<div class="ui center aligned content text container">
+		<p></p>
+	</div>
+	<div class="ui center aligned container">
+		<div class="ui green button" (click)="reJoinGame($event)">
+			<i class="checkmark icon"></i>
+			Join
+		</div>
+	</div>
+</div>

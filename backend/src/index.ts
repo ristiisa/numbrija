@@ -164,16 +164,20 @@ export const join = functions.https.onCall(async (data, context) => {
 		await newRound();
 
 	let numberOfOnlineUsers = await houseKeeping();
-	console.log(numberOfOnlineUsers)
 
 	// limit the number of online users to a maximum of 10
-	if(numberOfOnlineUsers > 10) {
+	if(numberOfOnlineUsers >= 2) {
 		return {
 			data: {
 				result: Response.ERROR,
 				message: 'Maximum number of users reached'
 			}
 		}
+	} else {
+		await admin.database().ref('/users').child(context.auth.uid).update({
+			lastAnswer: admin.database.ServerValue.TIMESTAMP,
+			status: ConnectionStatus.Online
+		});
 	}
 
 	return {
@@ -242,9 +246,10 @@ export const checkAnswer = async (data, token, res) => {
 					result: Response.OK,
 					correct: true
 				}
-			})).catch((e) => {
-				console.log(e, "transaction fail");
+			})).catch((error) => {
+				console.log(error, "transaction failed");
 
+				// the user was correct, but not fast enough, we'll still record the answer time
 				return Promise.all([
 					userRef.update({
 						lastAnswer: admin.database.ServerValue.TIMESTAMP,
@@ -252,7 +257,6 @@ export const checkAnswer = async (data, token, res) => {
 					}),
 					houseKeeping()
 				]).then(() => {
-					// the user was correct, but not fast enough, we'll still record the answer time
 					res.send({
 						data: {
 							result: Response.OK,
@@ -304,8 +308,9 @@ export const answer = functions.https.onRequest((req, res) => cors(req, res, asy
 	return checkAnswer(req.body.data, token, res);
 }));
 
-
-
+/**
+ * Composes a random Avataaar url
+ */
 export const generateAvataaarUrl = () => {
 	const options = {
 		topType: ["NoHair", "Eyepatch", "Hat", "Hijab", "Turban", "WinterHat1", "WinterHat2", "WinterHat3", "WinterHat4", "LongHairBigHair", "LongHairBob", "LongHairBun", "LongHairCurly", "LongHairCurvy", "LongHairDreads", "LongHairFrida", "LongHairFro", "LongHairFroBand", "LongHairNotTooLong", "LongHairShavedSides", "LongHairMiaWallace", "LongHairStraight", "LongHairStraight2", "LongHairStraightStrand", "ShortHairDreads01", "ShortHairDreads02", "ShortHairFrizzle", "ShortHairShaggyMullet", "ShortHairShortCurly", "ShortHairShortFlat", "ShortHairShortRound", "ShortHairShortWaved", "ShortHairSides", "ShortHairTheCaesar", "ShortHairTheCaesarSidePart"],
@@ -322,7 +327,7 @@ export const generateAvataaarUrl = () => {
 	};
 
 	let req = Object.keys(options).map(key => `${key}=` + options[key][options[key].length * Math.random() | 0]);
-	//https://avataaars.io/?avatarStyle=Circle&topType=ShortHairTheCaesar&accessoriesType=Round&hairColor=BrownDark&facialHairType=Blank&facialHairColor=Auburn&clotheType=ShirtCrewNeck&clotheColor=PastelOrange&eyeType=Side&eyebrowType=SadConcernedNatural&mouthType=Concerned&skinColor=DarkBrown'
+	
 	return "https://avataaars.io/?avatarStyle=Circle&" + req.join('&');
 };
 
@@ -339,6 +344,6 @@ export const completeUserData = functions.auth.user().onCreate((user) => {
 		uid: user.uid,
 		score: 0,
 		lastAnswer: admin.database.ServerValue.TIMESTAMP,
-		status: ConnectionStatus.Online
+		status: ConnectionStatus.Offline
 	});
 });

@@ -23,7 +23,6 @@ export class AuthService {
 
 			if (auth && auth.uid) {
 				const ref = db.database.ref(`users/${auth.uid}/status`);
-				ref.set(ConnectionStatus.Online);
 				ref.onDisconnect().set(ConnectionStatus.Offline);
 
 				this.photoURL = db.object(`users/${auth.uid}/photoURL`).valueChanges();
