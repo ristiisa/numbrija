@@ -302,7 +302,7 @@ export const generateAvataaarUrl = () => {
 
 	let req = Object.keys(options).map(key => `${key}=` + options[key][options[key].length * Math.random() | 0]);
 	//https://avataaars.io/?avatarStyle=Circle&topType=ShortHairTheCaesar&accessoriesType=Round&hairColor=BrownDark&facialHairType=Blank&facialHairColor=Auburn&clotheType=ShirtCrewNeck&clotheColor=PastelOrange&eyeType=Side&eyebrowType=SadConcernedNatural&mouthType=Concerned&skinColor=DarkBrown'
-	return "https://avataaars.io/?avatarStyle=Circle" + req.join('');
+	return "https://avataaars.io/?avatarStyle=Circle&" + req.join('&');
 };
 
 /**

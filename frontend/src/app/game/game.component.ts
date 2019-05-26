@@ -132,7 +132,7 @@ export class GameComponent implements OnInit {
 	}
 
 	answer(answer, e) {
-		// we are triggering change detection because we don"t want our users clicking on both of the buttons
+		// we are triggering change detection because we don't want our users clicking on both of the buttons
 		this.checking = true;
 		this.cd.detectChanges();
 
