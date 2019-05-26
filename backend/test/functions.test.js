@@ -21,6 +21,12 @@ sinon.stub(admin, "initializeApp");
 
 const lib = require("../lib/index");
 
+ConnectionStatus = {
+	Online : 1,
+	Idle: 2,
+	Offline: 3
+};
+
 /**
  * Creates a new app with authentication data matching the input.
  *
@@ -78,9 +84,9 @@ describe("housekeeping", () => {
     let now = new Date().getTime();
 
     let tests = [
-        {it: "should set the idle users' status to idle", lastAnswer: 0, status: 'online', expected: 'idle'},
-        {it: "should not set the disconnected user status to idle", lastAnswer: 0, status: 'disconnected', expected: 'disconnected'},
-        {it: "should not set the non idle users' status to idle", lastAnswer: now, status: 'online', expected: 'online'},
+        {it: "should set the idle users' status to idle", lastAnswer: 0, status: ConnectionStatus.Online, expected: ConnectionStatus.Idle},
+        {it: "should not set the disconnected user status to idle", lastAnswer: 0, status: ConnectionStatus.Offline, expected: ConnectionStatus.Offline},
+        {it: "should not set the non idle users' status to idle", lastAnswer: now, status: ConnectionStatus.Online, expected: ConnectionStatus.Online},
     ];
 
     tests.forEach(test => {
@@ -137,7 +143,7 @@ describe("newRound", () => {
 describe("answer", async () => {
     let db, rspData, challenge, rsp;
     
-    // for some reason mocking bleed is contaminated in the hooks... so if it works lets do our setup in here
+    // for some reason mocking bleed is contained in the hooks... so if it works lets do our setup in here
     before(async () => {
         db = adminApp();
         Object.defineProperty(admin, 'auth', {

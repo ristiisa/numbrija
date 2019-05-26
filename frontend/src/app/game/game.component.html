@@ -25,7 +25,7 @@
 								(click)="answer(1, $event)">Yes</button>
 						</div>
 					</div>
-					<div class="side">
+					<div class="side" id="message">
 						<div class="ui center-content massive header same-size">
 							<div class="ui content center">
 								{{message}}
@@ -36,14 +36,13 @@
 			</div>
 		</div>
 
-		<div class="center aligned extra content">
+		<div class="center aligned extra content" style="overflow: auto; max-height: 46vh;">
 			<a class="ui huge image label" [class.orange]="uid == auth.uid" *ngFor="let uid of playerIds"
 				style="margin:0; margin-bottom: 3px" [id]="uid">
 				<img [src]="players[uid].photoURL" />
 				<span class="score" style="min-width: 50px;display: inline-block;">{{players[uid].score}}</span>
 				<div class="detail" style="min-width: 100px;">
-					<i class="ban icon" *ngIf="players[uid].status == 'disconnect'"></i>
-					{{players[uid].status}}
+					{{statusString[players[uid].status] || 'online'}}
 				</div>
 			</a>
 		</div>

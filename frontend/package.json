@@ -28,6 +28,7 @@
 		"dom-confetti": "^0.1.1",
 		"firebase": "^6.0.2",
 		"jquery": "^3.4.1",
+		"moment": "^2.24.0",
 		"rxjs": "~6.3.3",
 		"semantic-ui": "^2.4.2",
 		"tslib": "^1.9.0",

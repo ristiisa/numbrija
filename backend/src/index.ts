@@ -10,7 +10,7 @@ const cors = require('cors')({
 enum Response {
 	ERROR,
 	OK
-}
+};
 
 export type Challenge = {
 	operands: Array<number>,
@@ -18,6 +18,14 @@ export type Challenge = {
 	answer: boolean,
 	value: number,
 	combined: string
+};
+
+
+// The numberic value of the memebers is important because we want to efficently filter out disconnected users
+export enum ConnectionStatus {
+	Online = 0,
+	Idle = 1,
+	Offline = 2
 };
 
 /**
@@ -45,7 +53,7 @@ export const generateChallenge = (): Challenge => {
 		else if (operands[0] % operands[1] !== 0) {
 			// lets factorize the larger operand and choose a random factor to replace the divider
 			const i = +(operands[1] > operands[0]);
-			const factors = [...Array(operands[i] + 1).keys()].filter(i => operands[i] % i === 0);
+			const factors = [...Array(operands[i] + 1).keys()].filter(i => operands[i] % i == 0);
 			operands[1] = factors[Math.random() * factors.length | 0];
 			operands[0] = operands[i]
 		}
@@ -58,7 +66,7 @@ export const generateChallenge = (): Challenge => {
 		value = Math.random() * 10 | 0;
 
 		// just in case we hit the same number again
-		answer = oldValue === value;
+		answer = oldValue == value;
 	}
 
 	return {
@@ -111,12 +119,20 @@ export const newRound = (): Promise<any> => {
  */
 export const houseKeeping = async (): Promise<any> => {
 	// TODO: remove old rounds
-	// if the user has been idle for 10 minutes set the status to idle
-	return admin.database().ref(`/users`).orderByChild('status').startAt('online').once('value').then(users => {
+
+	// fetch only those users who are either online or idle
+	// NOTE: firebase does not support this kind of filtering so what we can do is order the users by the value of connection status
+	// NOTE: and tell the server to send us data until the value of ConnectionStatus.Idle is reached and until it lasts
+	return admin.database().ref(`/users`).orderByChild('status').endAt(ConnectionStatus.Idle).once('value').then(users => {
 		const update = {};
 		users.forEach((user: any) => {
-			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 10 * 60 * 1000 && user.child('status').val() != 'disconnected')
-				update[`${user.key}/status`] = 'idle';
+			// if the user has been idle for 5 minutes set the status to idle
+			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 5 * 60 * 1000 && user.child('status').val() != ConnectionStatus.Offline)
+				update[`${user.key}/status`] = ConnectionStatus.Idle;
+
+			// if the user has been idle for 10 minutes set the status to disconnect
+			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 10 * 60 * 1000 && user.child('status').val() != ConnectionStatus.Offline)
+				update[`${user.key}/status`] = ConnectionStatus.Offline;
 		})
 
 		return admin.database().ref(`/users`).update(update);
@@ -177,7 +193,7 @@ export const checkAnswer = async (data, token, res) => {
 				}
 			})
 
-		if (data.answer === round.answer) {
+		if (data.answer == round.answer) {
 			// now lets see if the correct answer is the first correct answer
 			return roundRef.child('status').transaction(status => {
 				// if the status has not been set then we are first to set it
@@ -191,8 +207,8 @@ export const checkAnswer = async (data, token, res) => {
 				userRef.update({
 					score: (user.score || 0) + 1,
 					lastAnswer: admin.database.ServerValue.TIMESTAMP,
-					status: 'online'
-				}).then(() => console.log('update done')),
+					status: ConnectionStatus.Online
+				}),
 				admin.database().ref(`/round`).update({
 					status: 'closed',
 					closedBy: token.uid,
@@ -211,7 +227,7 @@ export const checkAnswer = async (data, token, res) => {
 				return Promise.all([
 					userRef.update({
 						lastAnswer: admin.database.ServerValue.TIMESTAMP,
-						status: 'online'
+						status: ConnectionStatus.Online
 					}),
 					houseKeeping()
 				]).then(() => {
@@ -225,13 +241,11 @@ export const checkAnswer = async (data, token, res) => {
 				})
 			});
 		} else {
-			console.log("answer incorrect");
-
 			return Promise.all([
 				userRef.update({
 					score: (user.score || 0) - 1,
 					lastAnswer: admin.database.ServerValue.TIMESTAMP,
-					status: 'online'
+					status: ConnectionStatus.Online
 				}),
 				houseKeeping()
 			]).then(() => res.send({
@@ -272,74 +286,23 @@ export const answer = functions.https.onRequest((req, res) => cors(req, res, asy
 
 
 export const generateAvataaarUrl = () => {
-	const topTypes = [
-		"NoHair", "Eyepatch", "Hat", "Hijab", "Turban", "WinterHat1", "WinterHat2", "WinterHat3", "WinterHat4", "LongHairBigHair", "LongHairBob", "LongHairBun", "LongHairCurly", "LongHairCurvy", "LongHairDreads", "LongHairFrida", "LongHairFro", "LongHairFroBand", "LongHairNotTooLong", "LongHairShavedSides", "LongHairMiaWallace", "LongHairStraight", "LongHairStraight2", "LongHairStraightStrand", "ShortHairDreads01", "ShortHairDreads02", "ShortHairFrizzle", "ShortHairShaggyMullet", "ShortHairShortCurly", "ShortHairShortFlat", "ShortHairShortRound", "ShortHairShortWaved", "ShortHairSides", "ShortHairTheCaesar", "ShortHairTheCaesarSidePart"
-	];
-	const top = topTypes[Math.random() * topTypes.length | 0];
+	const options = {
+		topType: ["NoHair", "Eyepatch", "Hat", "Hijab", "Turban", "WinterHat1", "WinterHat2", "WinterHat3", "WinterHat4", "LongHairBigHair", "LongHairBob", "LongHairBun", "LongHairCurly", "LongHairCurvy", "LongHairDreads", "LongHairFrida", "LongHairFro", "LongHairFroBand", "LongHairNotTooLong", "LongHairShavedSides", "LongHairMiaWallace", "LongHairStraight", "LongHairStraight2", "LongHairStraightStrand", "ShortHairDreads01", "ShortHairDreads02", "ShortHairFrizzle", "ShortHairShaggyMullet", "ShortHairShortCurly", "ShortHairShortFlat", "ShortHairShortRound", "ShortHairShortWaved", "ShortHairSides", "ShortHairTheCaesar", "ShortHairTheCaesarSidePart"],
+		hairColor: ["Black", "Blue01", "Blue02", "Blue03", "Gray01", "Gray02", "Heather", "PastelBlue", "PastelGreen", "PastelOrange", "PastelRed", "PastelYellow", "Pink", "Red", "White"],
+		accessoriesType: ["Blank", "Kurt", "Prescription01", "Prescription02", "Round", "Sunglasses", "Wayfarers"],
+		facialHairType: ["Blank", "BeardMedium", "BeardLight", "BeardMagestic", "MoustacheFancy", "MoustacheMagnum"],
+		facialHairColor: ["Auburn", "Black", "Blonde", "BlondeGolden", "Brown", "BrownDark", "Platinum", "Red"],
+		clothingType: ["BlazerShirt", "BlazerSweater", "CollarSweater", "GraphicShirt", "Hoodie", "Overall", "ShirtCrewNeck", "ShirtScoopNeck", "ShirtVNeck"],
+		clotheColor: ["Black", "Blue01", "Blue02", "Blue03", "Gray01", "Gray02", "Heather", "PastelBlue", "PastelGreen", "PastelOrange", "PastelRed", "PastelYellow", "Pink", "Red", "White"],
+		eyeType: ["Close", "Cry", "Default", "Dizzy", "EyeRoll", "Happy", "Hearts", "Side", "Squint", "Surprised", "Wink", "WinkWacky"],
+		eyeBrowType: ["Angry", "AngryNatural", "Default", "DefaultNatural", "FlatNatural", "RaisedExcited", "RaisedExcitedNatural", "SadConcerned", "SadConcernedNatural", "UnibrowNatural", "UpDown", "UpDownNatural"],
+		mouthType: ["Concerned", "Default", "Disbelief", "Eating", "Grimace", "Sad", "ScreamOpen", "Serious", "Smile", "Tongue", "Twinkle", "Vomit"],
+		skinColor: ["Tanned", "Yellow", "Pale", "Light", "Brown", "DarkBrown", "Black"]
+	};
 
-	const topColors = [
-		"Black", "Blue01", "Blue02", "Blue03", "Gray01", "Gray02", "Heather", "PastelBlue", "PastelGreen", "PastelOrange", "PastelRed", "PastelYellow", "Pink", "Red", "White"
-	];
-	const hairColor = topColors[Math.random() * topColors.length | 0];
-
-	const accessories = [
-		"Blank", "Kurt", "Prescription01", "Prescription02", "Round", "Sunglasses", "Wayfarers"
-	];
-	const accessory = accessories[Math.random() * accessories.length | 0];
-
-	const facialHairTypes = [
-		"Blank", "BeardMedium", "BeardLight", "BeardMagestic", "MoustacheFancy", "MoustacheMagnum"
-	];
-	const facialHair = facialHairTypes[Math.random() * facialHairTypes.length | 0];
-
-	const facialHairColors = [
-		"Auburn", "Black", "Blonde", "BlondeGolden", "Brown", "BrownDark", "Platinum", "Red"
-	];
-	const facialColor = facialHairColors[Math.random() * facialHairColors.length | 0];
-
-	const clothingType = [
-		"BlazerShirt", "BlazerSweater", "CollarSweater", "GraphicShirt", "Hoodie", "Overall", "ShirtCrewNeck", "ShirtScoopNeck", "ShirtVNeck"
-	];
-	const clothing = clothingType[Math.random() * clothingType.length | 0];
-
-	const clothColor = [
-		"Black", "Blue01", "Blue02", "Blue03", "Gray01", "Gray02", "Heather", "PastelBlue", "PastelGreen", "PastelOrange", "PastelRed", "PastelYellow", "Pink", "Red", "White"
-	];
-	const clothingColor = clothColor[Math.random() * clothColor.length | 0];
-
-	const eyeType = [
-		"Close", "Cry", "Default", "Dizzy", "EyeRoll", "Happy", "Hearts", "Side", "Squint", "Surprised", "Wink", "WinkWacky"
-	];
-	const eyes = eyeType[Math.random() * eyeType.length | 0];
-
-	const eyeBrowType = [
-		"Angry", "AngryNatural", "Default", "DefaultNatural", "FlatNatural", "RaisedExcited", "RaisedExcitedNatural", "SadConcerned", "SadConcernedNatural", "UnibrowNatural", "UpDown", "UpDownNatural"
-	];
-	const eyeBrows = eyeBrowType[Math.random() * eyeBrowType.length | 0];
-
-	const mouthType = [
-		"Concerned", "Default", "Disbelief", "Eating", "Grimace", "Sad", "ScreamOpen", "Serious", "Smile", "Tongue", "Twinkle", "Vomit"
-	];
-	const mouth = mouthType[Math.random() * mouthType.length | 0];
-
-	const skinColor = [
-		"Tanned", "Yellow", "Pale", "Light", "Brown", "DarkBrown", "Black"
-	];
-	const skin = skinColor[Math.random() * skinColor.length | 0];
-
+	let req = Object.keys(options).map(key => `${key}=` + options[key][options[key].length * Math.random() | 0]);
 	//https://avataaars.io/?avatarStyle=Circle&topType=ShortHairTheCaesar&accessoriesType=Round&hairColor=BrownDark&facialHairType=Blank&facialHairColor=Auburn&clotheType=ShirtCrewNeck&clotheColor=PastelOrange&eyeType=Side&eyebrowType=SadConcernedNatural&mouthType=Concerned&skinColor=DarkBrown'
-	return "https://avataaars.io/?avatarStyle=Circle" +
-		`&topType=${top}` +
-		`&accessoriesType=${accessory}` +
-		`&hairColor=${hairColor}` +
-		`&facialHairType=${facialHair}` +
-		`&facialHairColor=${facialColor}` +
-		`&clotheType=${clothingType}` +
-		`&clotheColor=${clothingColor}` +
-		`&eyeType=${eyes}` +
-		`&eyebrowType=${eyeBrows}` +
-		`&mouthType=${mouth}` +
-		`&skinColor=${skin}`;
+	return "https://avataaars.io/?avatarStyle=Circle" + req.join('');
 };
 
 /**
@@ -354,6 +317,7 @@ export const completeUserData = functions.auth.user().onCreate((user) => {
 		photoURL: generateAvataaarUrl(),
 		uid: user.uid,
 		score: 0,
-		lastAnswer: admin.database.ServerValue.TIMESTAMP
+		lastAnswer: admin.database.ServerValue.TIMESTAMP,
+		status: ConnectionStatus.Online
 	});
 });

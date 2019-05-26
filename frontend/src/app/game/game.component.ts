@@ -4,7 +4,6 @@ import { AngularFireDatabase } from "@angular/fire/database";
 import { AuthService } from "../auth.service";
 import { take, timeout } from "rxjs/operators";
 import { confetti } from "dom-confetti";
-
 declare var $: any;
 
 interface Round {
@@ -14,6 +13,12 @@ interface Round {
 	status?;
 	newRoundIn?;
 }
+
+export enum ConnectionStatus {
+	Online = 0,
+	Idle = 1,
+	Offline = 2
+};
 
 @Component({
 	selector: "app-game",
@@ -36,6 +41,8 @@ export class GameComponent implements OnInit {
 	message: string;
 	roundsLoaded: boolean;
 	usersLoaded: boolean;
+	firstDisconnectMessage = true;
+	statusString = ['online', 'idle', 'offline'];
 
 	constructor(private functions: AngularFireFunctions, private db: AngularFireDatabase, public auth: AuthService, private cd: ChangeDetectorRef) {
 	}
@@ -43,11 +50,11 @@ export class GameComponent implements OnInit {
 	ngOnInit() {
 		this.auth.state.pipe(take(1)).subscribe(() => {
 			this.functions.httpsCallable("join")({}).toPromise<any>().then(rsp => {
-				console.log(rsp)
 				if (rsp.data.result) {
+					// only set up the game if the server is running and is accepting new players
 					this.initGame();
 				} else {
-					$("#serverDeclined").modal('show');
+					$("#serverDeclined").modal('setting', 'closable', false).modal('show');
 				}
 			});
 
@@ -56,10 +63,13 @@ export class GameComponent implements OnInit {
 			this.db.database.ref(".info/connected").on("value", connected => {
 				const ref = this.db.database.ref(`users/${this.auth.uid}/status`);
 				if (connected.val() === true) {
-					ref.set("online");
-					$('#connectionDown').modal('hide');
+					ref.set(ConnectionStatus.Online);
+					$('#connectionDown').modal('setting', 'closable', false).modal('hide');
 				} else {
-					$('#connectionDown').modal('show');
+					if (!this.firstDisconnectMessage)
+						$('#connectionDown').modal('setting', 'closable', false).modal('show');
+
+					this.firstDisconnectMessage = false;
 				}
 			});
 		});
@@ -79,22 +89,21 @@ export class GameComponent implements OnInit {
 				this.startTimer();
 				if (round.closedBy !== this.auth.uid) {
 					if ($(`#${round.closedBy}`).length > 0) {
-						console.log(round.closedBy, $(`#${round.closedBy}`));
 						$(`#${round.closedBy}`).transition("pulse");
 						$(`#${round.closedBy}.score`).addClass("plusone");
 					}
 					this.message = "Too Slow!";
 
-					if ($(".active.side").first().attr('id') === "answer")
-						$(".ui.shape").first().shape("flip down");
+					$("#message").removeClass('active');
+					$("#answer").addClass('active');
 				}
 			} else {
 				// if the round is not closed we should stop the countdown...
 				this.pauseTimer();
 
 				// and show the control for answering to the user
-				if ($(".active.side").first().attr('id') !== "answer")
-					$(".ui.shape").first().shape("flip up");
+				$("#message").removeClass('active');
+				$("#answer").addClass('active');
 			}
 
 			this.roundsLoaded = true;
@@ -109,7 +118,7 @@ export class GameComponent implements OnInit {
 				if (uid === this.auth.uid)
 					this.score = users[uid].score;
 
-				if (users[uid].status !== "disconnect") {
+				if (users[uid].status !== ConnectionStatus.Offline) {
 					this.players[uid] = users[uid];
 					playerIds.push(uid);
 				}
@@ -135,28 +144,32 @@ export class GameComponent implements OnInit {
 				this.newChallengeLoading = true;
 				this.answerRecorded = new Date().getTime();
 				this.message = "Correct!";
-				if ($(".active.side").first().attr('id') === "answer")
-					$(".ui.shape").first().shape("flip right");
+
+				if ($(".active.side").first().attr('id') === "answer") {
+					$("#answer").removeClass('active');
+					$("#message").addClass('active');
+				}
 
 				$(".game").transition("jiggle");
 
 				// yay!
-				confetti($("body").first(), { duration: 3000 });
+				confetti($("body")[0], { duration: 3000 });
 			} else {
 				this.message = "Try Again!";
 
-				console.log($(".active.side").first(), $(".active.side").first().attr('id'))
-
-				if ($(".active.side").first().attr('id') === "answer")
-					$(".ui.shape").first().shape("flip left");
+				if ($(".active.side").first().attr('id') === "answer") {
+					$("#answer").removeClass('active');
+					$("#message").addClass('active');
+				}
 
 				$(".game").transition("shake");
-
-				// lets flip back to the input side, so the user can guess again
-				setTimeout(() => {
-					$(".ui.shape").first().shape("flip up");
-				}, 2000);
 			}
+
+			// lets flip back to the input side, so the user can guess again
+			setTimeout(() => {
+				$("#message").removeClass('active');
+				$("#answer").addClass('active');
+			}, 2000);
 		}).finally(() => {
 			classList.remove("loading");
 			this.checking = false;
