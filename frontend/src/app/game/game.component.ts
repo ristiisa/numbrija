@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from "@angular/core";
 import { AngularFireFunctions } from "@angular/fire/functions";
 import { AngularFireDatabase } from "@angular/fire/database";
-import { AuthService } from "../auth.service";
+import { AuthService, ConnectionStatus } from "../auth.service";
 import { take, timeout } from "rxjs/operators";
 import { confetti } from "dom-confetti";
 declare var $: any;
@@ -13,12 +13,6 @@ interface Round {
 	status?;
 	newRoundIn?;
 }
-
-export enum ConnectionStatus {
-	Online = 0,
-	Idle = 1,
-	Offline = 2
-};
 
 @Component({
 	selector: "app-game",

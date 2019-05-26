@@ -119,23 +119,33 @@ export const newRound = (): Promise<any> => {
  */
 export const houseKeeping = async (): Promise<any> => {
 	// TODO: remove old rounds
+	const moment = require('moment');
 
 	// fetch only those users who are either online or idle
 	// NOTE: firebase does not support this kind of filtering so what we can do is order the users by the value of connection status
 	// NOTE: and tell the server to send us data until the value of ConnectionStatus.Idle is reached and until it lasts
+	let onlineUsers = 0;
 	return admin.database().ref(`/users`).orderByChild('status').endAt(ConnectionStatus.Idle).once('value').then(users => {
 		const update = {};
 		users.forEach((user: any) => {
+			console.log(user.key, moment.duration(new Date().getTime() - user.val().lastAnswer).humanize())
+			onlineUsers++;
+
 			// if the user has been idle for 5 minutes set the status to idle
-			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 5 * 60 * 1000 && user.child('status').val() != ConnectionStatus.Offline)
+			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 5 * 60 * 1000 && user.child('status').val() != ConnectionStatus.Offline) {
 				update[`${user.key}/status`] = ConnectionStatus.Idle;
+				onlineUsers--;
+			}
 
 			// if the user has been idle for 10 minutes set the status to disconnect
-			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 10 * 60 * 1000 && user.child('status').val() != ConnectionStatus.Offline)
+			if ((new Date().getTime() - (user.val().lastAnswer || 0)) > 10 * 60 * 1000 && user.child('status').val() != ConnectionStatus.Offline) {
 				update[`${user.key}/status`] = ConnectionStatus.Offline;
+				onlineUsers--;
+			}
 		})
 
-		return admin.database().ref(`/users`).update(update);
+		console.log(update)
+		return admin.database().ref(`/users`).update(update).then(() => onlineUsers);
 	});
 };
 
@@ -153,7 +163,18 @@ export const join = functions.https.onCall(async (data, context) => {
 	if (!openRounds.hasChildren())
 		await newRound();
 
-	await houseKeeping();
+	let numberOfOnlineUsers = await houseKeeping();
+	console.log(numberOfOnlineUsers)
+
+	// limit the number of online users to a maximum of 10
+	if(numberOfOnlineUsers > 10) {
+		return {
+			data: {
+				result: Response.ERROR,
+				message: 'Maximum number of users reached'
+			}
+		}
+	}
 
 	return {
 		data: {

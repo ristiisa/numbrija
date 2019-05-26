@@ -4,6 +4,12 @@ import { AngularFireDatabase } from "@angular/fire/database";
 import { Router } from "@angular/router";
 import { Observable } from "rxjs";
 
+export enum ConnectionStatus {
+	Online = 0,
+	Idle = 1,
+	Offline = 2
+};
+
 @Injectable({
 	providedIn: "root"
 })
@@ -17,8 +23,8 @@ export class AuthService {
 
 			if (auth && auth.uid) {
 				const ref = db.database.ref(`users/${auth.uid}/status`);
-				ref.set("online");
-				ref.onDisconnect().set("disconnect");
+				ref.set(ConnectionStatus.Online);
+				ref.onDisconnect().set(ConnectionStatus.Offline);
 
 				this.photoURL = db.object(`users/${auth.uid}/photoURL`).valueChanges();
 			}
