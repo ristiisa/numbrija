@@ -101,6 +101,6 @@ npm run e2e
 # Deploying
 ```
 cd frontend
-npm build --prod --aot
+npm build
 firebase deploy --only functions,hosting
 ```
