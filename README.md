@@ -1,5 +1,6 @@
 # Numbrija
-A simple concurrent math game where players
+A simple concurrent math game where players compete by answering quickest to the simple computational challenge.
+
 [Demo](https://numbrija.web.app/)
 
 # Archidecture
