@@ -3,7 +3,7 @@ A simple concurrent math game where players compete by answering quickest to the
 
 [Demo](https://numbrija.web.app/)
 
-# Archidecture
+# Architecture
 Numbrija is composed from two parts - a backend built with Firebase Realtime Database and a front end built with Angular and Semantic UI.
 
 ## Backend
