@@ -22,9 +22,9 @@ sinon.stub(admin, "initializeApp");
 const lib = require("../lib/index");
 
 ConnectionStatus = {
-	Online : 1,
-	Idle: 2,
-	Offline: 3
+    Online: 1,
+    Idle: 2,
+    Offline: 3
 };
 
 /**
@@ -142,7 +142,7 @@ describe("newRound", () => {
 
 describe("answer", async () => {
     let db, rspData, challenge, rsp;
-    
+
     // for some reason mocking bleed is contained in the hooks... so if it works lets do our setup in here
     before(async () => {
         db = adminApp();
@@ -215,6 +215,72 @@ describe("answer", async () => {
 
         assert.equal(rspData.data.result, true);
         assert.equal(rspData.data.correct, false);
+    });
+});
+
+
+describe("join", async () => {
+    let db, rspData, challenge, rsp, numberOfUsers;
+    const getContext = (uid = "0", email_verified = true) => ({
+        auth: {
+            uid,
+            token: {
+                firebase: {
+                    email_verified
+                }
+            }
+        }
+    });
+
+    // for some reason mocking bleed is contained in the hooks... so if it works lets do our setup in here
+    before(async () => {
+        db = adminApp();
+
+        // lets override the newRound and houseKeeping functions as we test them separately
+        Object.defineProperty(lib, 'newRound', {get: () => sinon.stub().returns(Promise.resolve())});
+        Object.defineProperty(lib, 'houseKeeping', {get: () => sinon.stub().returns(Promise.resolve(numberOfUsers))});
+
+        challenge = {
+            answer: true,
+            challenge: '1+1=2',
+            key: 0
+        };
+
+        rsp = {
+            send: (data) => {
+                rspData = data;
+                return Promise.resolve()
+            }
+        };
+    });
+
+    beforeEach(async () => {
+        await db.ref().set({
+            rounds: {
+                [challenge.key]: challenge
+            },
+            users: {
+                0: {
+                    score: 1
+                }
+            }
+        });
+    });
+
+    it("should allow to join if there are less than 10 users logged in", async () => {
+        numberOfUsers = 9
+        let joinWrapped = ffest.wrap(lib.join);
+
+        let rspData = await joinWrapped({}, getContext());
+        assert.equal(rspData.data.result, true);
+    });
+
+    it("should not allow to join if there are more than 10 users logged in", async () => {
+        numberOfUsers = 10
+        let joinWrapped = ffest.wrap(lib.join);
+
+        let rspData = await joinWrapped({}, getContext());
+        assert.equal(rspData.data.result, false);
     });
 });
 
