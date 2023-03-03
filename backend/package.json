@@ -35,7 +35,7 @@
 	"devDependencies": {
 		"@firebase/testing": "^0.9.4",
 		"firebase-functions-test": "^0.1.6",
-		"mocha": "^6.1.4",
+		"mocha": "^6.2.3",
 		"node-mocks-http": "^1.7.5",
 		"npm-watch": "^0.6.0",
 		"rxjs": "^6.5.2",
